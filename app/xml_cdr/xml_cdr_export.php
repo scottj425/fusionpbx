@@ -75,6 +75,8 @@
 					else {
 						echo ',"'.$key.'"';
 					}
+				} elseif ($key == "json") {
+					echo ",\"voco_duration\"";
 				}
 				$z++;
 			}
@@ -92,6 +94,22 @@
 						else {
 							echo ',"'.$result[$x][$key].'"';
 						}
+					} elseif ($key == "json") {
+						$variables = json_decode($result[$x][$key])->{"variables"};
+						$bridgeEpoch = $variables->{"bridge_epoch"};
+						$endEpoch = (int)$variables->{"end_epoch"};
+						if ($bridgeEpoch > 0) {
+							$vocoDuration = strval(($endEpoch - $bridgeEpoch));
+						} else {
+							$vocoDuration = "0";
+						}
+						if ($z == 0) {
+							echo '"'.$vocoDuration.'"';
+						}
+						else {
+							echo ',"'.$vocoDuration.'"';
+						}
+						unset($vocoDuration, $bridgeEpoch, $endEpoch, $variables);
 					}
 					$z++;
 				}
