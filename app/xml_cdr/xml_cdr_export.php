@@ -42,6 +42,11 @@
 	$language = new text;
 	$text = $language->get();
 
+// hide fields from CSV CDR
+	$hiddenKeys = ["domain_uuid", "extension", "hangup_cause", "billmsec", "record_path", "record_name", "xml_cdr", 
+	"caller_destination", "source_number", "destination_number", "leg", "raw_data_exists", "accountcode",
+	"tta", "pdd_ms", "rtp_audio_in_mos", "sip_hangup_disposition", "answer_stamp", "direction", "billsec", "xml", "json"];
+
 //additional includes
 	$rows_per_page = ($_SESSION['domain']['paging']['numeric'] != '') ? $_SESSION['domain']['paging']['numeric'] : 50;
 	$archive_request = $_POST['archive_request'] == 'true' ? true : false;
@@ -68,17 +73,23 @@
 		//set the csv headers
 			$z = 0;
 			foreach ($result[0] as $key => $val) {
-				if ($key != "xml" && $key != "json") {
+				if (!in_array($key, $hiddenKeys)) {
 					if ($z == 0) {
 						echo '"'.$key.'"';
 					}
 					else {
 						echo ',"'.$key.'"';
 					}
+					$z++;
 				} elseif ($key == "json") {
-					echo ",\"voco_duration\"";
+					if ($z == 0) {
+						echo "\"voco_duration\",\"voco_number\",\"destination_number\"";
+					}
+					else {
+						echo ",\"voco_duration\",\"voco_number\",\"destination_number\"";
+					}
+					$z++;
 				}
-				$z++;
 			}
 			echo "\n";
 
@@ -87,31 +98,37 @@
 			while (true) {
 				$z = 0;
 				foreach ($result[0] as $key => $val) {
-					if ($key != "xml" && $key != "json") {
+					if (!in_array($key, $hiddenKeys)) {
 						if ($z == 0) {
 							echo '"'.$result[$x][$key].'"';
 						}
 						else {
 							echo ',"'.$result[$x][$key].'"';
 						}
+						$z++;
 					} elseif ($key == "json") {
 						$variables = json_decode($result[$x][$key])->{"variables"};
+						$callFlow = json_decode($result[$x][$key])->{"callflow"};
+						$callerProfile = $callFlow->{"caller_profile"};
 						$bridgeEpoch = $variables->{"bridge_epoch"};
 						$endEpoch = (int)$variables->{"end_epoch"};
+						$vocoNumber = $callerProfile->{"destination_number"};
+						$iridiumNumber = $variables->{"iridium_number"};
+
 						if ($bridgeEpoch > 0) {
 							$vocoDuration = strval(($endEpoch - $bridgeEpoch));
 						} else {
 							$vocoDuration = "0";
 						}
 						if ($z == 0) {
-							echo '"'.$vocoDuration.'"';
+							echo '"'.$vocoDuration.'","'.$vocoNumber.'","'.$iridiumNumber.'"';
 						}
 						else {
-							echo ',"'.$vocoDuration.'"';
+							echo ',"'.$vocoDuration.'","'.$vocoNumber.'","'.$iridiumNumber.'"';
 						}
 						unset($vocoDuration, $bridgeEpoch, $endEpoch, $variables);
+						$z++;
 					}
-					$z++;
 				}
 				echo "\n";
 				++$x;
